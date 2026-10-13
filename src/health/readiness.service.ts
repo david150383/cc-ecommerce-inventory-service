@@ -1,4 +1,4 @@
-import { type BeforeApplicationShutdown, Injectable } from "@nestjs/common";
+import { type BeforeApplicationShutdown, Injectable, Logger } from "@nestjs/common";
 
 export interface ReadinessCheck {
   name: string;
@@ -13,13 +13,15 @@ const CHECK_TIMEOUT_MS = 2_000;
 export class ReadinessService implements BeforeApplicationShutdown {
   private readonly checks: ReadinessCheck[] = [];
   private shuttingDown = false;
+  private readonly logger = new Logger(ReadinessService.name);
 
   register(check: ReadinessCheck): void {
     this.checks.push(check);
   }
 
-  beforeApplicationShutdown(): void {
+  beforeApplicationShutdown(signal?: string): void {
     this.shuttingDown = true;
+    this.logger.log({ signal }, "shutdown started");
   }
 
   async evaluate(): Promise<{ ready: boolean; checks: Record<string, "ok" | "failed"> }> {
