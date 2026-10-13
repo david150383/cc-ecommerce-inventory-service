@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # ---- build: compile TypeScript (decorator metadata requires tsc, not esbuild) ----
 FROM node:24-alpine AS build
 WORKDIR /app
