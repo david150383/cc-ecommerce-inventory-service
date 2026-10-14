@@ -1,21 +1,9 @@
 import type { INestApplication } from "@nestjs/common";
-import { Test } from "@nestjs/testing";
 import request from "supertest";
-import { AppModule } from "../src/app.module";
-import { loadEnv } from "../src/config/env";
-import { configureApp } from "../src/configure-app";
 import { ReadinessService } from "../src/health/readiness.service";
+import { buildApp } from "./helpers";
 
-async function buildApp(): Promise<INestApplication> {
-  const env = loadEnv({ NODE_ENV: "test", LOG_LEVEL: "silent" });
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(env)] }).compile();
-  const app = moduleRef.createNestApplication({ logger: false, bodyParser: false });
-  configureApp(app, env);
-  await app.init();
-  return app;
-}
-
-describe("Inventory Service HTTP skeleton", () => {
+describe("Inventory Service HTTP foundation", () => {
   let app: INestApplication;
 
   beforeEach(async () => {
@@ -32,17 +20,17 @@ describe("Inventory Service HTTP skeleton", () => {
     expect(res.body).toEqual({ status: "ok" });
   });
 
-  it("GET /health/ready returns 200 when checks pass", async () => {
+  it("GET /health/ready checks the database", async () => {
     const res = await request(app.getHttpServer()).get("/health/ready");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ready", checks: { "accepting-traffic": "ok" } });
+    expect(res.body).toEqual({ status: "ready", checks: { "accepting-traffic": "ok", database: "ok" } });
   });
 
   it("GET /health/ready returns 503 when a registered check fails", async () => {
-    app.get(ReadinessService).register({ name: "database", check: () => Promise.reject(new Error("down")) });
+    app.get(ReadinessService).register({ name: "broker", check: () => Promise.reject(new Error("down")) });
     const res = await request(app.getHttpServer()).get("/health/ready");
     expect(res.status).toBe(503);
-    expect(res.body.checks).toEqual({ "accepting-traffic": "ok", database: "failed" });
+    expect(res.body.checks.broker).toBe("failed");
   });
 
   it("propagates a valid correlation ID and generates a request ID", async () => {
@@ -52,10 +40,10 @@ describe("Inventory Service HTTP skeleton", () => {
   });
 
   it("returns RFC 9457 problem+json for unknown routes", async () => {
-    const res = await request(app.getHttpServer()).get("/api/v1/inventory/does-not-exist-yet");
+    const res = await request(app.getHttpServer()).get("/api/v1/nothing-here");
     expect(res.status).toBe(404);
     expect(res.headers["content-type"]).toMatch(/^application\/problem\+json/);
-    expect(res.body).toMatchObject({ status: 404, code: "NOT_FOUND", instance: "/api/v1/inventory/does-not-exist-yet" });
+    expect(res.body).toMatchObject({ status: 404, code: "NOT_FOUND", instance: "/api/v1/nothing-here" });
     expect(res.body.correlationId).toBe(res.headers["x-correlation-id"]);
   });
 
@@ -78,10 +66,12 @@ describe("Inventory Service HTTP skeleton", () => {
     expect(res.body.code).toBe("PAYLOAD_TOO_LARGE");
   });
 
-  it("serves the generated OpenAPI document", async () => {
+  it("serves the generated OpenAPI document with the inventory routes", async () => {
     const res = await request(app.getHttpServer()).get("/docs-json");
     expect(res.status).toBe(200);
-    expect(res.body.info.title).toBe("Inventory Service");
+    expect(Object.keys(res.body.paths)).toEqual(
+      expect.arrayContaining(["/api/v1/inventory/reservations", "/api/v1/inventory/{sku}", "/api/v1/inventory/low-stock"]),
+    );
   });
 
   it("sets security headers", async () => {

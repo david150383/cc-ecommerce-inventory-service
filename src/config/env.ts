@@ -14,9 +14,23 @@ const EnvSchema = z.object({
         .map((origin) => origin.trim())
         .filter(Boolean),
     ),
+
+  DATABASE_URL: z.string().startsWith("postgresql://"),
+  DB_POOL_SIZE: z.coerce.number().int().min(1).max(100).default(10),
+
+  // Tokens are issued by ecommerce-auth-service and verified with its public keys.
+  JWKS_URL: z.url().default("http://localhost:4001/.well-known/jwks.json"),
+  JWT_ISSUER: z.string().default("ecommerce-auth-service"),
+  JWT_AUDIENCE: z.string().default("ecommerce-api"),
+
+  RESERVATION_DEFAULT_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(2_700),
+  /// How often expired reservations are released. 0 disables the sweeper (tests call it directly).
+  EXPIRY_SWEEP_INTERVAL_MS: z.coerce.number().int().min(0).default(30_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
+
+export const ENV = Symbol("ENV");
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const result = EnvSchema.safeParse(source);

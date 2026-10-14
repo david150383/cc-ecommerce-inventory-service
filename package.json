@@ -13,7 +13,12 @@
     "lint": "eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/database/data-source.ts",
+    "migration:run": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
+    "db:check-drift": "typeorm-ts-node-commonjs migration:generate src/database/migrations/Drift -d src/database/data-source.ts --check",
+    "lockfile:verify": "docker run --rm -v \"$PWD/package.json:/app/package.json:ro\" -v \"$PWD/package-lock.json:/app/package-lock.json:ro\" -w /app node:24-alpine npm ci --ignore-scripts --no-audit --no-fund"
   },
   "jest": {
     "testEnvironment": "node",
@@ -30,10 +35,17 @@
       "json"
     ],
     "collectCoverageFrom": [
-      "src/**/*.ts"
-    ]
+      "src/**/*.ts",
+      "!src/database/migrations/**",
+      "!src/main.ts"
+    ],
+    "globalSetup": "<rootDir>/test/global-setup.ts",
+    "testTimeout": 30000,
+    "maxWorkers": 1
   },
   "devDependencies": {
+    "@emnapi/core": "^1.11.3",
+    "@emnapi/runtime": "^1.11.3",
     "@eslint/js": "^10.0.1",
     "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.1.0",
@@ -41,6 +53,7 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
@@ -49,6 +62,7 @@
     "jest": "^30.5.2",
     "supertest": "^7.3.1",
     "ts-jest": "^29.4.14",
+    "ts-node": "^10.9.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.71.2"
   },
@@ -57,13 +71,19 @@
     "@nestjs/core": "^11.2.7",
     "@nestjs/platform-express": "^11.2.7",
     "@nestjs/swagger": "^11.4.7",
+    "@nestjs/typeorm": "^11.0.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "express": "^5.3.0",
     "helmet": "^8.3.0",
+    "jose": "^5.10.0",
     "nestjs-pino": "^5.3.1",
+    "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "typeorm": "^1.1.2",
     "uuid": "^11.1.1",
     "zod": "^4.6.7"
   },

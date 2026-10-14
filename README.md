@@ -7,7 +7,7 @@ concurrent checkouts and duplicate messages (see [docs/api.md](docs/api.md#how-o
 
 | | |
 |---|---|
-| Stack | Node.js 24, NestJS 11, TypeScript 5.9, PostgreSQL 17, TypeORM *(Phase 2)*, Jest |
+| Stack | Node.js 24, NestJS 11, TypeScript 5.9, PostgreSQL 17, TypeORM 1.x, class-validator, jose 5, Jest |
 | Port | 4003 |
 | Database | `inventory_db` (PostgreSQL), owned exclusively by this service |
 | API docs | [docs/api.md](docs/api.md); generated OpenAPI at `/docs` |
@@ -18,16 +18,39 @@ concurrent checkouts and duplicate messages (see [docs/api.md](docs/api.md#how-o
 | Phase | Done |
 |---|---|
 | 1: skeleton | ✅ Nest app with pino logging (redaction), correlation IDs, RFC 9457 filter, own JSON parser with problem responses, readiness service with shutdown hook, Swagger, Dockerfile, CI, message schemas |
-| 2: features | ⏳ TypeORM entities & migrations, reservations with row-level locking, idempotency, audit, concurrency test |
+| 2: features | ✅ Stock records & adjustments, all-or-nothing reservations (conditional updates, SKU-ordered locking), idempotency incl. remembered failures, confirm/release, expiry sweeper (SKIP LOCKED), audit trail, low-stock alerts, outbox events, JWT auth, TypeORM migrations |
+| 3 | ⏳ SQS command consumer + outbox relay |
 
 ## Run locally
 
 ```bash
+docker compose up -d       # standalone Postgres on 5443 (or the shared stack on 5432)
 cp .env.example .env
 npm install
-npm run dev            # nest start --watch, http://localhost:4003/health/live, /docs
-npm test               # Jest
+npm run migration:run      # apply migrations
+npm run dev                # nest start --watch, http://localhost:4003/docs
+npm test                   # Jest; recreates inventory_test from the migrations
 ```
+
+## Migrations (TypeORM)
+
+```bash
+npm run migration:generate -- src/database/migrations/DescribeChange   # DRAFT from entity changes, then review it
+npm run migration:run
+npm run migration:revert
+npm run db:check-drift     # fails if entities changed without a migration (CI runs this)
+```
+
+`synchronize` is always `false`: the schema only changes through reviewed migrations. In containers the
+`migrate` image target runs the compiled migrations as a one-off job (`inventory-migrate` in the platform
+compose file).
+
+## A bug worth remembering
+
+TypeORM's `manager.query()` returns rows for `SELECT` but `[rows, affectedCount]` for `UPDATE … RETURNING`.
+A conditional reservation that matched nothing therefore returned `[[], 0]`, and `result[0]` (`[]`) is
+truthy, so a short line looked reserved. The concurrency tests caught it as overselling. All raw SQL now
+goes through `src/database/sql.ts`, which always returns the rows.
 
 ## Why NestJS 11, not 12?
 
@@ -48,7 +71,11 @@ All versions are affected and it never ships in the image. `npm audit --omit=dev
 src/main.ts                    bootstrap (bodyParser: false; see configure-app.ts)
 src/configure-app.ts           helmet, CORS, JSON parser, filters, Swagger: shared with tests
 src/app.module.ts              AppModule.forRoot(env)
-src/common/                    logger options, correlation IDs, RFC 9457 problem filter
+src/common/                    logger options, correlation IDs, RFC 9457 problems, validation pipe
+src/auth/                      JWT verification (Auth's JWKS), global guard, @Roles()
+src/inventory/                 controllers, DTOs, ReservationService, StockService, expiry scheduler
+src/database/                  entities list, data source (app + CLI), migrations, sql() helper
+src/outbox/                    outbox entity + writeEvent() (same transaction as the change)
 src/health/                    /health/live, /health/ready, ReadinessService (+ shutdown hook)
-test/                          Jest + Supertest, schema validation
+test/                          Jest + Supertest against real Postgres: concurrency, idempotency, schemas
 ```
