@@ -6,6 +6,8 @@ import type { Principal } from "../auth/principal";
 export interface RequestMeta {
   correlationId: string;
   actor: string | null;
+  /** The message that caused this action (command messageId), when it came from a queue. */
+  causationId?: string | null;
 }
 
 export const Meta = createParamDecorator((_data: unknown, ctx: ExecutionContext): RequestMeta => {

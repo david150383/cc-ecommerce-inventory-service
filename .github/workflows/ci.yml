@@ -26,9 +26,17 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U inventory_svc -d inventory_db"
           --health-interval 5s --health-timeout 3s --health-retries 20
+      # Local AWS emulator for the SNS/SQS messaging tests (in-memory: nothing to persist in CI).
+      floci:
+        image: floci/floci:2.0.1
+        ports: ["4566:4566"]
+        options: >-
+          --health-cmd "curl -fs http://localhost:4566/_floci/health"
+          --health-interval 5s --health-timeout 3s --health-retries 30
     env:
       DATABASE_URL: postgresql://inventory_svc:inventory_local_pw@localhost:5432/inventory_db
       TEST_DATABASE_URL: postgresql://inventory_svc:inventory_local_pw@localhost:5432/inventory_test
+      TEST_AWS_ENDPOINT_URL: http://localhost:4566
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,7 +50,7 @@ jobs:
         run: npm run migration:run && npm run migration:revert && npm run migration:run
       - name: Entities have no changes missing a migration
         run: npm run db:check-drift
-      - name: Unit + integration tests (incl. concurrency / no-oversell)
+      - name: Unit + integration tests (incl. concurrency / no-oversell, SNS/SQS against Floci)
         run: npm test
       - run: npm run build
 

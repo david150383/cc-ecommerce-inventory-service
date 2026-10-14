@@ -8,6 +8,7 @@ import { ENV, type Env } from "./config/env";
 import { dataSourceOptions } from "./database/data-source";
 import { HealthModule } from "./health/health.module";
 import { InventoryModule } from "./inventory/inventory.module";
+import { MessagingModule } from "./messaging/messaging.module";
 
 @Global()
 @Module({})
@@ -35,6 +36,7 @@ export class AppModule {
         AuthModule.forRoot(options.jwks ?? null),
         HealthModule,
         InventoryModule,
+        MessagingModule,
       ],
     };
   }

@@ -63,6 +63,10 @@ export class Reservation {
   @Column({ name: "unavailable_lines", type: "jsonb", nullable: true })
   unavailableLines!: UnavailableLine[] | null;
 
+  /** Why a REJECTED reservation failed (UNKNOWN_SKU | INSUFFICIENT_STOCK), so replays can repeat it exactly. */
+  @Column({ name: "failure_reason", type: "varchar", length: 30, nullable: true })
+  failureReason!: string | null;
+
   @Column({ name: "release_reason", type: "varchar", length: 50, nullable: true })
   releaseReason!: string | null;
 

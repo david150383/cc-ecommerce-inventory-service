@@ -128,9 +128,19 @@ export class ReservationService {
       if (short.length > 0) {
         await sql(m, "ROLLBACK TO SAVEPOINT reserve_lines");
         const unavailable = await this.availability(m, lines);
-        await sql(m, 
-          `UPDATE reservations SET status = 'REJECTED', unavailable_lines = $2, updated_at = now() WHERE id = $1`,
-          [id, JSON.stringify(unavailable)],
+        const known = await sql<{ sku: string }>(m, `SELECT sku FROM stock_items WHERE sku = ANY($1)`, [lines.map((l) => l.sku)]);
+        const failureReason = lines.some((l) => !known.some((k) => k.sku === l.sku)) ? "UNKNOWN_SKU" : "INSUFFICIENT_STOCK";
+        await sql(
+          m,
+          `UPDATE reservations SET status = 'REJECTED', unavailable_lines = $2, failure_reason = $3, updated_at = now() WHERE id = $1`,
+          [id, JSON.stringify(unavailable), failureReason],
+        );
+        // The failure is an outcome too: the saga waits for exactly one result event per command.
+        await writeEvent(
+          m,
+          "InventoryReservationFailed",
+          { orderId: input.orderId, reason: failureReason, unavailableLines: unavailable },
+          { correlationId: meta.correlationId, causationId: meta.causationId ?? null, sagaId: input.sagaId },
         );
         return { kind: "rejected" as const };
       }
@@ -149,7 +159,7 @@ export class ReservationService {
         m,
         "InventoryReserved",
         { reservationId: id, orderId: input.orderId, lines, expiresAt: reservation.expiresAt },
-        { correlationId: meta.correlationId, sagaId: input.sagaId },
+        { correlationId: meta.correlationId, causationId: meta.causationId ?? null, sagaId: input.sagaId },
       );
       for (const low of lowStock) await this.lowStockEvent(m, low, meta);
       return { kind: "created" as const };
@@ -191,6 +201,7 @@ export class ReservationService {
       await sql(m, `UPDATE reservations SET status = 'CONFIRMED', updated_at = now() WHERE id = $1`, [id]);
       await writeEvent(m, "InventoryReservationConfirmed", { reservationId: id, orderId: r.order_id }, {
         correlationId: meta.correlationId,
+        causationId: meta.causationId ?? null,
         sagaId: r.saga_id,
       });
       return false;
@@ -247,6 +258,57 @@ export class ReservationService {
     }
   }
 
+  // ======================================================================= outcomes for commands
+
+  /**
+   * Re-emits the result event matching a reservation's CURRENT state. Used when a command is a
+   * duplicate (e.g. the saga re-sent it after a crash): the work is not repeated, but the sender
+   * still gets its answer. Consumers dedupe by state, so an extra copy is harmless.
+   */
+  async emitOutcome(reservationId: string, meta: RequestMeta): Promise<void> {
+    await this.db.transaction(async (m) => {
+      const r = await m.getRepository<Reservation>("Reservation").findOneOrFail({
+        where: { id: reservationId },
+        relations: { lines: true },
+      });
+      const eventMeta = { correlationId: meta.correlationId, causationId: meta.causationId ?? null, sagaId: r.sagaId };
+      const lines = [...r.lines].sort((a, b) => a.sku.localeCompare(b.sku)).map((l) => ({ sku: l.sku, quantity: l.quantity }));
+      switch (r.status) {
+        case ReservationStatus.ACTIVE:
+          return writeEvent(m, "InventoryReserved", { reservationId: r.id, orderId: r.orderId, lines, expiresAt: r.expiresAt.toISOString() }, eventMeta);
+        case ReservationStatus.CONFIRMED:
+          return writeEvent(m, "InventoryReservationConfirmed", { reservationId: r.id, orderId: r.orderId }, eventMeta);
+        case ReservationStatus.RELEASED:
+        case ReservationStatus.EXPIRED:
+          return writeEvent(m, "InventoryReservationReleased", { reservationId: r.id, orderId: r.orderId, reason: r.releaseReason ?? "REQUESTED" }, eventMeta);
+        case ReservationStatus.REJECTED:
+          return writeEvent(
+            m,
+            "InventoryReservationFailed",
+            { orderId: r.orderId, reason: r.failureReason ?? "INSUFFICIENT_STOCK", unavailableLines: r.unavailableLines ?? [] },
+            eventMeta,
+          );
+      }
+    });
+  }
+
+  /** Writes a standalone event (e.g. "nothing to release", "cannot confirm") for a command outcome. */
+  async emitEvent(messageType: string, payload: object, meta: RequestMeta & { sagaId: string | null }): Promise<void> {
+    await this.db.transaction((m) =>
+      writeEvent(m, messageType, payload, { correlationId: meta.correlationId, causationId: meta.causationId ?? null, sagaId: meta.sagaId }),
+    );
+  }
+
+  /** The order's live (ACTIVE or CONFIRMED) reservation, if any. At most one exists (partial unique index). */
+  async findLiveByOrder(orderId: string): Promise<{ id: string; status: ReservationStatus } | null> {
+    const rows = await sql<{ id: string; status: ReservationStatus }>(
+      this.db.manager,
+      `SELECT id, status FROM reservations WHERE order_id = $1 AND status IN ('ACTIVE', 'CONFIRMED')`,
+      [orderId],
+    );
+    return rows[0] ?? null;
+  }
+
   // ======================================================================= reads
 
   async get(id: string): Promise<ReservationView> {
@@ -274,6 +336,7 @@ export class ReservationService {
     ]);
     await writeEvent(m, "InventoryReservationReleased", { reservationId: r.id, orderId: r.order_id, reason }, {
       correlationId: meta.correlationId,
+      causationId: meta.causationId ?? null,
       sagaId: r.saga_id,
     });
   }
@@ -321,7 +384,7 @@ export class ReservationService {
   }
 
   private async lowStockEvent(m: EntityManager, low: { sku: string; available: number; threshold: number }, meta: RequestMeta) {
-    await writeEvent(m, "InventoryLowStock", low, { correlationId: meta.correlationId });
+    await writeEvent(m, "InventoryLowStock", low, { correlationId: meta.correlationId, causationId: meta.causationId ?? null });
   }
 
   private async findByKey(key: string): Promise<Reservation> {
