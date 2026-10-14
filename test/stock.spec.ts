@@ -104,8 +104,12 @@ describe("visibility and authorization", () => {
   it("rejects expired tokens and tokens minted for another service", async () => {
     const expired = await token(["admin"], { expiresIn: "-2m" });
     expect((await http().get("/api/v1/inventory").set("Authorization", `Bearer ${expired}`)).status).toBe(401);
-    const other = await token(["admin"], { audience: "ecommerce-payment-service" });
-    expect((await http().get("/api/v1/inventory").set("Authorization", `Bearer ${other}`)).status).toBe(401);
+    const other = await token(["service"], { audience: "ecommerce-product-service" }); // minted for Product
+    expect(
+      (await http().post("/api/v1/inventory/reservations").set("Authorization", `Bearer ${other}`).set("Idempotency-Key", newId()).send({})).status,
+    ).toBe(401);
+    const otherAdmin = await token(["admin"], { audience: "ecommerce-payment-service" });
+    expect((await http().get("/api/v1/inventory").set("Authorization", `Bearer ${otherAdmin}`)).status).toBe(401);
     expect((await http().get("/api/v1/inventory/TEE-1").set("Authorization", "Bearer garbage")).status).toBe(401);
   });
 });

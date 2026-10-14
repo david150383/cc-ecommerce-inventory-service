@@ -33,7 +33,10 @@ export async function token(roles: string[], opts: { sub?: string; audience?: st
     .sign(privateKey);
 }
 
-export const bearer = async (...roles: string[]) => ({ Authorization: `Bearer ${await token(roles)}` });
+export const bearer = async (...roles: string[]) => ({
+  // Service tokens are addressed to the target service, like Auth's client-credentials grant.
+  Authorization: `Bearer ${await token(roles, roles.includes("service") ? { audience: "ecommerce-inventory-service" } : {})}`,
+});
 
 export async function buildApp(overrides: Record<string, string> = {}): Promise<INestApplication> {
   const env = loadEnv({

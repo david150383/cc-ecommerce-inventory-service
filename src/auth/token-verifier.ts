@@ -29,7 +29,8 @@ export class TokenVerifier {
     try {
       const { payload } = await jwtVerify(token, this.keys, {
         issuer: this.env.JWT_ISSUER,
-        audience: this.env.JWT_AUDIENCE,
+        // User tokens (shared audience) and service tokens minted for this service only.
+        audience: [this.env.JWT_AUDIENCE, this.env.JWT_SERVICE_AUDIENCE],
         algorithms: ["RS256"], // never trust the token's own "alg" header
         clockTolerance: 30,
         requiredClaims: ["sub", "exp", "iat"],

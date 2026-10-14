@@ -21,7 +21,8 @@ const EnvSchema = z.object({
   // Tokens are issued by ecommerce-auth-service and verified with its public keys.
   JWKS_URL: z.url().default("http://localhost:4001/.well-known/jwks.json"),
   JWT_ISSUER: z.string().default("ecommerce-auth-service"),
-  JWT_AUDIENCE: z.string().default("ecommerce-api"),
+  JWT_AUDIENCE: z.string().default("ecommerce-api"), // user tokens
+  JWT_SERVICE_AUDIENCE: z.string().default("ecommerce-inventory-service"), // service tokens addressed to THIS service
 
   RESERVATION_DEFAULT_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(2_700),
   /// How often expired reservations are released. 0 disables the sweeper (tests call it directly).
