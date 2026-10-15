@@ -1,0 +1,29 @@
+{
+  "source": "ecommerce-contracts",
+  "version": "v1.0.0",
+  "commit": "2820581f413c93db7ccd90c6411fe2d125736d1d",
+  "service": "inventory-service",
+  "directories": [
+    "events/schemas",
+    "events/examples"
+  ],
+  "files": {
+    "events/examples/inventory-low-stock.v1.json": "4b52a15fc91ce20af5f46e2bffacd426b113331668b73e6615634e7dc2b90b72",
+    "events/examples/inventory-reservation-confirm-requested.v1.json": "0cc0bbd86db73df62f8576c5d641dfe62acdeeab39d3a4d8bbe323e48deb3ceb",
+    "events/examples/inventory-reservation-confirmed.v1.json": "dc296adbe1cd93558c2083312154f6515b2b549767cdd7b81c63ea600ec729cf",
+    "events/examples/inventory-reservation-failed.v1.json": "dc536286bfe0107b3bbd4f6cf458317abddb55976fe2ea8e24d0241f768a4c6c",
+    "events/examples/inventory-reservation-release-requested.v1.json": "dfa0cc0a0a1148d3b06f2ba5002f2ff370c915ab3ddad821f2a2ad30fead8187",
+    "events/examples/inventory-reservation-released.v1.json": "14448c45dc84ebbc37c53a515c0edd4f0222e8568208d10be80ce45db4a5b8ae",
+    "events/examples/inventory-reservation-requested.v1.json": "5879b681109ca75f3c08b69f224a12cb4e7cfcaf116f83676cd302bc0a028d10",
+    "events/examples/inventory-reserved.v1.json": "8f11feae3e0a1332695ec172c152aae8e801d91e53de2a13b590428d9b299b64",
+    "events/schemas/envelope.v1.schema.json": "773577105e1a89528f466579fd827da24313ff0f6a8edcd248358a0163e53d5a",
+    "events/schemas/inventory-low-stock.v1.schema.json": "1408469a54a9eafd752bd34914146a6a3b7dcc22313ef1e4951cddfb765ddce2",
+    "events/schemas/inventory-reservation-confirm-requested.v1.schema.json": "dcc103d9dd9a156bd7d1918af1c5bd4648874ca7beea540ebd595e4fe94c86b2",
+    "events/schemas/inventory-reservation-confirmed.v1.schema.json": "e9b336f4f21765d90775b4d6ea6e333592cfc5a3901dde47ddb8e6f6bf3a5f2e",
+    "events/schemas/inventory-reservation-failed.v1.schema.json": "9e05023c70603f11fd578b0b2ebb6b21aa43bf5aa26069d4381313588d051ba2",
+    "events/schemas/inventory-reservation-release-requested.v1.schema.json": "0583600b0df44f3817965af1950ee0f0a5c496a1e2f7d7d55814bf21a4fcbfa5",
+    "events/schemas/inventory-reservation-released.v1.schema.json": "533d9a5e6b37bde18dc1d4f84b7f7f1070bb4fd2e9569536108f07459378c982",
+    "events/schemas/inventory-reservation-requested.v1.schema.json": "e77aca92aa3066d5f4eac2926b4f08bc1b8eb05e5e7628f23187238cdde60fdc",
+    "events/schemas/inventory-reserved.v1.schema.json": "851625c4516a43ed3bc0d519353d2119463cb3f26cfc413053482a50ea4060cb"
+  }
+}

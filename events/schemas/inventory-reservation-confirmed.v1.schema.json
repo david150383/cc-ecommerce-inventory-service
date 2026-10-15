@@ -9,7 +9,7 @@
     "ecommerce-saga-orchestrator"
   ],
   "x-channel": "SNS inventory-events",
-  "$ref": "envelope.v1.schema.json",
+  "$ref": "../common/envelope.v1.schema.json",
   "properties": {
     "messageKind": {
       "const": "event"

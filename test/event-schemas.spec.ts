@@ -1,10 +1,12 @@
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import addFormats from "ajv-formats";
+import { commandParser } from "../src/messaging/command-schemas";
 
-// Every message schema this service owns must compile, and every example in
-// events/examples must validate against the schema with the same base name.
+// Every message schema vendored from ecommerce-contracts (owned, sent or received) must compile,
+// and every example in events/examples must validate against the schema with the same base name.
 const schemasDir = join(__dirname, "..", "events", "schemas");
 const examplesDir = join(__dirname, "..", "events", "examples");
 
@@ -37,5 +39,19 @@ describe("event and command schemas", () => {
     const validate = ajv.getSchema(read(schemasDir, file).$id)!;
     const example = { ...read(examplesDir, file.replace(".schema.json", ".json")), idempotencyKey: null };
     expect(validate(example)).toBe(false);
+  });
+});
+
+describe("pinned contracts (ecommerce-contracts)", () => {
+  it("vendored schemas and examples match contracts.lock.json (no hand edits)", () => {
+    expect(() => execFileSync(process.execPath, [join(__dirname, "..", "scripts", "verify-contracts.mjs"), join(__dirname, "..")], { stdio: "pipe" })).not.toThrow();
+  });
+
+  it("the command parser accepts this service's three commands", () => {
+    const parse = commandParser();
+    for (const f of ["inventory-reservation-requested", "inventory-reservation-confirm-requested", "inventory-reservation-release-requested"]) {
+      const example = JSON.parse(readFileSync(join(examplesDir, `${f}.v1.json`), "utf8"));
+      expect(parse(example).messageType).toBe(example.messageType);
+    }
   });
 });

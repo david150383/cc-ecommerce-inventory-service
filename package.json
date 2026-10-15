@@ -19,7 +19,8 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
     "db:check-drift": "typeorm-ts-node-commonjs migration:generate src/database/migrations/Drift -d src/database/data-source.ts --check",
     "lockfile:verify": "docker run --rm -v \"$PWD/package.json:/app/package.json:ro\" -v \"$PWD/package-lock.json:/app/package-lock.json:ro\" -w /app node:24-alpine npm ci --ignore-scripts --no-audit --no-fund",
-    "openapi:export": "OPENAPI_WRITE=1 jest test/openapi.spec.ts"
+    "openapi:export": "OPENAPI_WRITE=1 jest test/openapi.spec.ts",
+    "contracts:verify": "node scripts/verify-contracts.mjs"
   },
   "jest": {
     "testEnvironment": "node",

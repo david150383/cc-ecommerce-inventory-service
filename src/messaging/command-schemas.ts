@@ -17,7 +17,10 @@ export function commandParser(schemasDir = join(__dirname, "..", "..", "events",
   for (const file of readdirSync(schemasDir).filter((f) => f.endsWith(".schema.json"))) {
     const schema = JSON.parse(readFileSync(join(schemasDir, file), "utf8"));
     ajv.addSchema(schema);
-    if (schema["x-message-kind"] === "command") byType.set(schema.properties.messageType.const, schema.$id);
+    // Only commands addressed to THIS service: the vendored contracts also hold commands it sends.
+    if (schema["x-message-kind"] === "command" && (schema["x-consumers"] ?? []).includes("ecommerce-inventory-service")) {
+      byType.set(schema.properties.messageType.const, schema.$id);
+    }
   }
 
   return (raw: unknown): CommandEnvelope => {
