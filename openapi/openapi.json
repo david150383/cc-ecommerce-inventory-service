@@ -25,8 +25,75 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Replay of the same key (header Idempotency-Replayed: true)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationEnvelopeDto"
+                }
+              }
+            }
+          },
           "201": {
-            "description": ""
+            "description": "Reserved. Header Location: the reservation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationEnvelopeDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body or missing Idempotency-Key",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a service or admin",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INSUFFICIENT_STOCK (nothing reserved; extra: reservationId, unavailableLines) or ORDER_ALREADY_RESERVED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "IDEMPOTENCY_KEY_REUSED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -55,7 +122,24 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationEnvelopeDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown reservation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -84,7 +168,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationEnvelopeDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown reservation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RESERVATION_EXPIRED or the reservation is released/rejected",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -113,7 +224,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationEnvelopeDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown reservation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RESERVATION_CONFIRMED: confirmed stock is returned with InventoryReturnRequested instead",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -162,7 +300,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -182,7 +357,34 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LowStockListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -211,7 +413,31 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Admins get the full stock record; everyone else only availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AvailabilityDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/StockDto"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown SKU",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -256,7 +482,74 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Header Idempotency-Replayed: true on a replay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body or missing Idempotency-Key",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown SKU",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "WOULD_UNDERCUT_RESERVATIONS: on hand would drop below what is reserved",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "IDEMPOTENCY_KEY_REUSED: the key was used for a different adjustment",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -285,7 +578,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovementListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown SKU",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -317,6 +647,63 @@
       }
     },
     "schemas": {
+      "FieldErrorDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "message"
+        ]
+      },
+      "ProblemDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "https://errors.ecommerce.local/not-found"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "number"
+          },
+          "code": {
+            "type": "string",
+            "example": "NOT_FOUND"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldErrorDto"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "instance",
+          "correlationId"
+        ]
+      },
       "ReservationLineDto": {
         "type": "object",
         "properties": {
@@ -365,6 +752,315 @@
         "required": [
           "orderId",
           "lines"
+        ]
+      },
+      "ReservationStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "CONFIRMED",
+          "RELEASED",
+          "EXPIRED",
+          "REJECTED",
+          "RETURNED"
+        ]
+      },
+      "ReservedLineDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "sku",
+          "quantity"
+        ]
+      },
+      "UnavailableLineDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "requested": {
+            "type": "number"
+          },
+          "available": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sku",
+          "requested",
+          "available"
+        ]
+      },
+      "ReservationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sagaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReservationStatus"
+              }
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservedLineDto"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unavailableLines": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnavailableLineDto"
+            }
+          },
+          "releaseReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "sagaId",
+          "status",
+          "lines",
+          "expiresAt",
+          "unavailableLines",
+          "releaseReason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ReservationEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "reservation": {
+            "$ref": "#/components/schemas/ReservationDto"
+          }
+        },
+        "required": [
+          "reservation"
+        ]
+      },
+      "StockDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "example": "TEE-CLASSIC-BLK-M"
+          },
+          "onHand": {
+            "type": "number",
+            "minimum": 0
+          },
+          "reserved": {
+            "type": "number",
+            "minimum": 0
+          },
+          "available": {
+            "type": "number",
+            "description": "onHand - reserved"
+          },
+          "lowStockThreshold": {
+            "type": "number",
+            "minimum": 0
+          },
+          "lowStock": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "sku",
+          "onHand",
+          "reserved",
+          "available",
+          "lowStockThreshold",
+          "lowStock",
+          "updatedAt"
+        ]
+      },
+      "AvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "example": "TEE-CLASSIC-BLK-M"
+          },
+          "available": {
+            "type": "number",
+            "description": "Units that can still be ordered (0 when out of stock)"
+          },
+          "inStock": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sku",
+          "available",
+          "inStock"
+        ]
+      },
+      "CursorPageDto": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number"
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Pass as `cursor` for the next page; null on the last page"
+          }
+        },
+        "required": [
+          "limit",
+          "nextCursor"
+        ]
+      },
+      "StockListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockDto"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/CursorPageDto"
+          }
+        },
+        "required": [
+          "data",
+          "page"
+        ]
+      },
+      "LowStockListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "MovementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deltaOnHand": {
+            "type": "number"
+          },
+          "deltaReserved": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "RESTOCK",
+              "RETURN",
+              "DAMAGED",
+              "CORRECTION",
+              "RESERVED",
+              "RESERVATION_CONFIRMED",
+              "RESERVATION_RELEASED",
+              "RESERVATION_EXPIRED",
+              "RESERVATION_RETURNED"
+            ]
+          },
+          "referenceId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Reservation id or adjustment key"
+          },
+          "actor": {
+            "type": "string",
+            "nullable": true
+          },
+          "correlationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "deltaOnHand",
+          "deltaReserved",
+          "reason",
+          "referenceId",
+          "actor",
+          "correlationId",
+          "note",
+          "createdAt"
+        ]
+      },
+      "MovementListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovementDto"
+            }
+          }
+        },
+        "required": [
+          "data"
         ]
       },
       "AdjustStockDto": {
