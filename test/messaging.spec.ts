@@ -5,8 +5,9 @@ import Ajv2020 from "ajv/dist/2020";
 import addFormats from "ajv-formats";
 import { DataSource } from "typeorm";
 import { MessagingRunner } from "../src/messaging/messaging.module";
-import { AWS_ENDPOINT, command, createTestTopology, receiveAll, sendCommand, type TestTopology } from "./floci";
+import { AWS_ENDPOINT, command, createTestTopology, receiveAll, sendCommand, sns, sqs, type TestTopology } from "./floci";
 import { buildApp, newId, resetDatabase, seedStock, stockOf } from "./helpers";
+import { deleteTestQueues, deleteTestTopics } from "./test-cleanup";
 
 let app: INestApplication;
 let topo: TestTopology;
@@ -27,6 +28,8 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await app.close();
+  await deleteTestTopics(sns, topo.prefix);
+  await deleteTestQueues(sqs, topo.prefix);
 });
 // Every event this service wrote during a test must match its published contract (by messageType).
 const schemasDir = join(__dirname, "..", "events", "schemas");
