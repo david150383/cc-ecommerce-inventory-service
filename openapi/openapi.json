@@ -1,0 +1,400 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/inventory/reservations": {
+      "post": {
+        "operationId": "ReservationsController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reserve stock for an order (all lines or none). 201 new, 200 replay, 409 insufficient",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/api/v1/inventory/reservations/{id}": {
+      "get": {
+        "operationId": "ReservationsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reservation state",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/api/v1/inventory/reservations/{id}/confirm": {
+      "post": {
+        "operationId": "ReservationsController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deduct reserved stock permanently (idempotent). 409 if expired or released",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/api/v1/inventory/reservations/{id}/release": {
+      "post": {
+        "operationId": "ReservationsController_release",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Return reserved stock (idempotent). 409 if already confirmed",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/api/v1/inventory": {
+      "get": {
+        "operationId": "InventoryController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "nextCursor from the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "skuPrefix",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "TEE-",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List stock (admin, cursor pagination by SKU)",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/v1/inventory/low-stock": {
+      "get": {
+        "operationId": "InventoryController_lowStock",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "SKUs at or below their low-stock threshold (admin)",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/v1/inventory/{sku}": {
+      "get": {
+        "operationId": "InventoryController_getOne",
+        "parameters": [
+          {
+            "name": "sku",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Availability (public) or full stock record (admin)",
+        "tags": [
+          "stock"
+        ]
+      },
+      "patch": {
+        "operationId": "InventoryController_adjust",
+        "parameters": [
+          {
+            "name": "sku",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Restock, write off, correct, or set the low-stock threshold (admin, idempotent)",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/v1/inventory/{sku}/movements": {
+      "get": {
+        "operationId": "InventoryController_movements",
+        "parameters": [
+          {
+            "name": "sku",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Audit history of stock changes for a SKU (admin, newest first)",
+        "tags": [
+          "stock"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Inventory Service",
+    "description": "Stock levels, reservations and the stock audit trail. Semantics (locking, idempotency, expiry): docs/api.md",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "ReservationLineDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "example": "TEE-CLASSIC-BLK-M"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 2,
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "sku",
+          "quantity"
+        ]
+      },
+      "CreateReservationDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sagaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservationLineDto"
+            }
+          },
+          "ttlSeconds": {
+            "type": "number",
+            "example": 2700,
+            "minimum": 60,
+            "maximum": 86400,
+            "description": "Default 2700 (45 min)"
+          }
+        },
+        "required": [
+          "orderId",
+          "lines"
+        ]
+      },
+      "AdjustStockDto": {
+        "type": "object",
+        "properties": {
+          "delta": {
+            "type": "number",
+            "example": 50,
+            "description": "Change to on_hand (negative for write-offs). Requires reason."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "RESTOCK",
+              "RETURN",
+              "DAMAGED",
+              "CORRECTION"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "lowStockThreshold": {
+            "type": "number",
+            "example": 5,
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

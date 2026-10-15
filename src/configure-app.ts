@@ -26,7 +26,14 @@ export function configureApp(app: INestApplication, env: Env): void {
   app.useGlobalPipes(createValidationPipe());
   app.enableShutdownHooks();
 
-  const openApi = new DocumentBuilder()
+  SwaggerModule.setup("docs", app, () => buildOpenApiDocument(app), {
+    jsonDocumentUrl: "docs-json",
+  });
+}
+
+/** The OpenAPI document, from the controllers and DTOs. Committed as openapi/openapi.json (drift-tested). */
+export function buildOpenApiDocument(app: INestApplication) {
+  const config = new DocumentBuilder()
     .setTitle("Inventory Service")
     .setDescription(
       "Stock levels, reservations and the stock audit trail. Semantics (locking, idempotency, expiry): docs/api.md",
@@ -34,7 +41,5 @@ export function configureApp(app: INestApplication, env: Env): void {
     .setVersion("1.0.0")
     .addBearerAuth()
     .build();
-  SwaggerModule.setup("docs", app, () => SwaggerModule.createDocument(app, openApi), {
-    jsonDocumentUrl: "docs-json",
-  });
+  return SwaggerModule.createDocument(app, config);
 }
