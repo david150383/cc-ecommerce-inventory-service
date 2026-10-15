@@ -1,4 +1,8 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { INestApplication } from "@nestjs/common";
+import Ajv2020 from "ajv/dist/2020";
+import addFormats from "ajv-formats";
 import { DataSource } from "typeorm";
 import { MessagingRunner } from "../src/messaging/messaging.module";
 import { AWS_ENDPOINT, command, createTestTopology, receiveAll, sendCommand, type TestTopology } from "./floci";
@@ -23,6 +27,26 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await app.close();
+});
+// Every event this service wrote during a test must match its published contract (by messageType).
+const schemasDir = join(__dirname, "..", "events", "schemas");
+const ajv = addFormats(new Ajv2020({ strict: true, strictTypes: false, allErrors: true }));
+ajv.addVocabulary(["x-producer", "x-consumers", "x-channel", "x-message-kind"]);
+const schemaByType = new Map<string, string>();
+for (const f of readdirSync(schemasDir).filter((f) => f.endsWith(".schema.json"))) {
+  const schema = JSON.parse(readFileSync(join(schemasDir, f), "utf8"));
+  ajv.addSchema(schema);
+  const type = schema.properties?.messageType?.const;
+  if (type) schemaByType.set(type, schema.$id);
+}
+afterEach(async () => {
+  for (const row of await outbox()) {
+    const id = schemaByType.get(row.message_type);
+    expect({ type: row.message_type, hasSchema: Boolean(id) }).toEqual({ type: row.message_type, hasSchema: true });
+    const validate = ajv.getSchema(id!)!;
+    validate(row.envelope);
+    expect({ type: row.message_type, errors: validate.errors ?? [] }).toEqual({ type: row.message_type, errors: [] });
+  }
 });
 beforeEach(async () => {
   await resetDatabase(app);
@@ -155,6 +179,43 @@ describe("command consumer", () => {
       ["InventoryReservationReleased", "EXPIRED"],
       ["InventoryReservationFailed", "RESERVATION_EXPIRED"],
     ]);
+  });
+
+  it("InventoryReturnRequested puts a confirmed reservation's stock back on hand, once, and answers every copy", async () => {
+    await seedStock(app, "TEE-1", 10, 0);
+    const orderId = newId();
+    await deliver(command("InventoryReservationRequested", { orderId, lines: [{ sku: "TEE-1", quantity: 3 }] }));
+    const [r] = (await db.query(`SELECT id FROM reservations`)) as { id: string }[];
+    await deliver(command("InventoryReservationConfirmRequested", { reservationId: r!.id, orderId }));
+    expect(await stockOf(app, "TEE-1")).toEqual({ on_hand: 7, reserved: 0 });
+
+    const ret = command("InventoryReturnRequested", { orderId, reservationId: r!.id, reason: "ORDER_CANCELLED" });
+    await deliver(ret);
+    await deliver(ret); // redelivery
+    // A very late duplicate confirm must not deduct the returned stock again.
+    await deliver(command("InventoryReservationConfirmRequested", { reservationId: r!.id, orderId }));
+
+    expect(await stockOf(app, "TEE-1")).toEqual({ on_hand: 10, reserved: 0 });
+    const events = (await outbox()).slice(2).map((e) => [e.message_type, e.envelope.payload.outcome ?? null]);
+    expect(events).toEqual([
+      ["InventoryReturned", "RETURNED"],
+      ["InventoryReturned", "RETURNED"],
+      ["InventoryReturned", "RETURNED"],
+    ]);
+    expect((await outbox())[2]!.envelope).toMatchObject({ causationId: ret.messageId, payload: { orderId, reservationId: r!.id, lines: [{ sku: "TEE-1", quantity: 3 }] } });
+    const movements = (await db.query(`SELECT reason, delta_on_hand FROM stock_movements WHERE reference_id = $1 ORDER BY created_at, id`, [r!.id])) as { reason: string; delta_on_hand: number }[];
+    expect(movements.map((m) => m.reason)).toEqual(["RESERVED", "RESERVATION_CONFIRMED", "RESERVATION_RETURNED"]);
+  });
+
+  it("returning a reservation that was never confirmed changes nothing and answers NOTHING_TO_RETURN", async () => {
+    await seedStock(app, "TEE-1", 10, 0);
+    const orderId = newId();
+    await deliver(command("InventoryReservationRequested", { orderId, lines: [{ sku: "TEE-1", quantity: 2 }] }));
+    const [r] = (await db.query(`SELECT id FROM reservations`)) as { id: string }[];
+    await deliver(command("InventoryReturnRequested", { orderId, reservationId: r!.id, reason: "ORDER_CANCELLED" }));
+
+    expect(await stockOf(app, "TEE-1")).toEqual({ on_hand: 10, reserved: 2 });
+    expect((await outbox()).at(-1)).toMatchObject({ message_type: "InventoryReturned", envelope: { payload: { outcome: "NOTHING_TO_RETURN", lines: [] } } });
   });
 
   it("malformed and schema-invalid commands are never deleted: they end up in the DLQ", async () => {

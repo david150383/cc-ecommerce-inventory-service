@@ -47,9 +47,9 @@ describe("pinned contracts (ecommerce-contracts)", () => {
     expect(() => execFileSync(process.execPath, [join(__dirname, "..", "scripts", "verify-contracts.mjs"), join(__dirname, "..")], { stdio: "pipe" })).not.toThrow();
   });
 
-  it("the command parser accepts this service's three commands", () => {
+  it("the command parser accepts this service's four commands", () => {
     const parse = commandParser();
-    for (const f of ["inventory-reservation-requested", "inventory-reservation-confirm-requested", "inventory-reservation-release-requested"]) {
+    for (const f of ["inventory-reservation-requested", "inventory-reservation-confirm-requested", "inventory-reservation-release-requested", "inventory-return-requested"]) {
       const example = JSON.parse(readFileSync(join(examplesDir, `${f}.v1.json`), "utf8"));
       expect(parse(example).messageType).toBe(example.messageType);
     }

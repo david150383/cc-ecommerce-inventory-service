@@ -1,7 +1,7 @@
 {
   "source": "ecommerce-contracts",
-  "version": "v1.0.0",
-  "commit": "2820581f413c93db7ccd90c6411fe2d125736d1d",
+  "version": "v1.2.0",
+  "commit": "7eb336305c2aa3bfbd163a64f043605d98dbadfd",
   "service": "inventory-service",
   "directories": [
     "events/schemas",
@@ -16,6 +16,8 @@
     "events/examples/inventory-reservation-released.v1.json": "14448c45dc84ebbc37c53a515c0edd4f0222e8568208d10be80ce45db4a5b8ae",
     "events/examples/inventory-reservation-requested.v1.json": "5879b681109ca75f3c08b69f224a12cb4e7cfcaf116f83676cd302bc0a028d10",
     "events/examples/inventory-reserved.v1.json": "8f11feae3e0a1332695ec172c152aae8e801d91e53de2a13b590428d9b299b64",
+    "events/examples/inventory-return-requested.v1.json": "122be25a7d750690d4fa9de38a5f35a92f71723d4e8484497e9ec0071560f399",
+    "events/examples/inventory-returned.v1.json": "2955f3a77c35fa98d09491eb67f556b20738b0ab003f80afd04298b7c8222791",
     "events/schemas/envelope.v1.schema.json": "773577105e1a89528f466579fd827da24313ff0f6a8edcd248358a0163e53d5a",
     "events/schemas/inventory-low-stock.v1.schema.json": "1408469a54a9eafd752bd34914146a6a3b7dcc22313ef1e4951cddfb765ddce2",
     "events/schemas/inventory-reservation-confirm-requested.v1.schema.json": "dcc103d9dd9a156bd7d1918af1c5bd4648874ca7beea540ebd595e4fe94c86b2",
@@ -24,6 +26,8 @@
     "events/schemas/inventory-reservation-release-requested.v1.schema.json": "0583600b0df44f3817965af1950ee0f0a5c496a1e2f7d7d55814bf21a4fcbfa5",
     "events/schemas/inventory-reservation-released.v1.schema.json": "533d9a5e6b37bde18dc1d4f84b7f7f1070bb4fd2e9569536108f07459378c982",
     "events/schemas/inventory-reservation-requested.v1.schema.json": "e77aca92aa3066d5f4eac2926b4f08bc1b8eb05e5e7628f23187238cdde60fdc",
-    "events/schemas/inventory-reserved.v1.schema.json": "851625c4516a43ed3bc0d519353d2119463cb3f26cfc413053482a50ea4060cb"
+    "events/schemas/inventory-reserved.v1.schema.json": "851625c4516a43ed3bc0d519353d2119463cb3f26cfc413053482a50ea4060cb",
+    "events/schemas/inventory-return-requested.v1.schema.json": "2282d032c56550a7aa7b2c6b40c77e3918f5e49ab715de4696d3ad8aa9add882",
+    "events/schemas/inventory-returned.v1.schema.json": "cc8e853232d9c2ea3fd132d7b7297a4913305637fde10396cef5ef32079bed24"
   }
 }

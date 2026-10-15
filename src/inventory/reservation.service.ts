@@ -181,7 +181,8 @@ export class ReservationService {
   async confirm(id: string, meta: RequestMeta): Promise<ReservationView> {
     const expired = await this.db.transaction(async (m) => {
       const r = await this.lock(m, id);
-      if (r.status === ReservationStatus.CONFIRMED) return false;
+      // RETURNED was confirmed before: a late duplicate confirm must not deduct the stock again.
+      if (r.status === ReservationStatus.CONFIRMED || r.status === ReservationStatus.RETURNED) return false;
       if (r.status === ReservationStatus.RELEASED || r.status === ReservationStatus.EXPIRED || r.status === ReservationStatus.REJECTED) {
         throw this.notConfirmable(r);
       }
@@ -226,6 +227,39 @@ export class ReservationService {
       await this.returnStock(m, r, "REQUESTED", meta);
     });
     return this.get(id);
+  }
+
+  // ======================================================================= return
+
+  /**
+   * CONFIRMED -> RETURNED: the order was cancelled before it shipped, so its stock goes back on hand.
+   * Idempotent: RETURNED again is a no-op ("replayed"). Any other state had no stock deducted, so there is
+   * nothing to put back. Each call writes exactly one InventoryReturned event (the answer to the command).
+   */
+  async restock(id: string, meta: RequestMeta): Promise<{ outcome: "RETURNED" | "NOTHING_TO_RETURN"; replayed: boolean }> {
+    return this.db.transaction(async (m) => {
+      const r = await this.lock(m, id);
+      const eventMeta = { correlationId: meta.correlationId, causationId: meta.causationId ?? null, sagaId: r.saga_id };
+      const lines = r.lines.map((l) => ({ sku: l.sku, quantity: l.quantity }));
+      if (r.status === ReservationStatus.RETURNED) {
+        await writeEvent(m, "InventoryReturned", { reservationId: r.id, orderId: r.order_id, outcome: "RETURNED", lines }, eventMeta);
+        return { outcome: "RETURNED", replayed: true };
+      }
+      if (r.status !== ReservationStatus.CONFIRMED) {
+        await writeEvent(m, "InventoryReturned", { reservationId: r.id, orderId: r.order_id, outcome: "NOTHING_TO_RETURN", lines: [] }, eventMeta);
+        return { outcome: "NOTHING_TO_RETURN", replayed: false };
+      }
+      for (const line of r.lines) {
+        await sql(m,
+          `UPDATE stock_items SET on_hand = on_hand + $2, version = version + 1, updated_at = now() WHERE sku = $1`,
+          [line.sku, line.quantity],
+        );
+        await this.movement(m, line.sku, line.quantity, 0, "RESERVATION_RETURNED", id, meta);
+      }
+      await sql(m, `UPDATE reservations SET status = 'RETURNED', updated_at = now() WHERE id = $1`, [id]);
+      await writeEvent(m, "InventoryReturned", { reservationId: r.id, orderId: r.order_id, outcome: "RETURNED", lines }, eventMeta);
+      return { outcome: "RETURNED", replayed: false };
+    });
   }
 
   // ======================================================================= expiry
@@ -281,6 +315,8 @@ export class ReservationService {
         case ReservationStatus.RELEASED:
         case ReservationStatus.EXPIRED:
           return writeEvent(m, "InventoryReservationReleased", { reservationId: r.id, orderId: r.orderId, reason: r.releaseReason ?? "REQUESTED" }, eventMeta);
+        case ReservationStatus.RETURNED:
+          return writeEvent(m, "InventoryReturned", { reservationId: r.id, orderId: r.orderId, outcome: "RETURNED", lines }, eventMeta);
         case ReservationStatus.REJECTED:
           return writeEvent(
             m,

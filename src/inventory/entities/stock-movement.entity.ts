@@ -8,7 +8,8 @@ export type MovementReason =
   | "RESERVED"
   | "RESERVATION_CONFIRMED"
   | "RESERVATION_RELEASED"
-  | "RESERVATION_EXPIRED";
+  | "RESERVATION_EXPIRED"
+  | "RESERVATION_RETURNED";
 
 /** Append-only audit trail: every change to on_hand or reserved writes one row. */
 @Entity("stock_movements")

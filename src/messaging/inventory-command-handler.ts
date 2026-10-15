@@ -22,6 +22,8 @@ export class InventoryCommandHandler implements CommandHandler {
         return this.confirm(cmd, meta);
       case "InventoryReservationReleaseRequested":
         return this.release(cmd, meta);
+      case "InventoryReturnRequested":
+        return this.restock(cmd, meta);
       default:
         throw new InvalidCommand(`no handler for ${cmd.messageType}`);
     }
@@ -60,7 +62,7 @@ export class InventoryCommandHandler implements CommandHandler {
     try {
       const before = await this.reservations.get(p.reservationId);
       await this.reservations.confirm(p.reservationId, meta);
-      if (before.status === "CONFIRMED") await this.reservations.emitOutcome(p.reservationId, meta); // duplicate
+      if (before.status === "CONFIRMED" || before.status === "RETURNED") await this.reservations.emitOutcome(p.reservationId, meta); // duplicate
     } catch (err) {
       if (!(err instanceof ProblemException)) throw err;
       if (err.code === "NOT_FOUND") throw new InvalidCommand(`unknown reservation ${p.reservationId}`);
@@ -97,6 +99,19 @@ export class InventoryCommandHandler implements CommandHandler {
         return this.reservations.emitOutcome(reservationId, meta);
       }
       if (err instanceof ProblemException && err.code === "NOT_FOUND") throw new InvalidCommand(`unknown reservation ${reservationId}`);
+      throw err;
+    }
+  }
+
+  private async restock(cmd: CommandEnvelope, meta: RequestMeta): Promise<void> {
+    const p = cmd.payload as { orderId: string; reservationId: string; reason: string };
+    try {
+      const { outcome } = await this.reservations.restock(p.reservationId, meta); // writes InventoryReturned
+      if (outcome === "NOTHING_TO_RETURN") {
+        this.logger.warn({ orderId: p.orderId, reservationId: p.reservationId, correlationId: cmd.correlationId }, "return requested for a reservation that was never confirmed");
+      }
+    } catch (err) {
+      if (err instanceof ProblemException && err.code === "NOT_FOUND") throw new InvalidCommand(`unknown reservation ${p.reservationId}`);
       throw err;
     }
   }

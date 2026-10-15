@@ -22,6 +22,8 @@ export enum ReservationStatus {
   EXPIRED = "EXPIRED",
   /** Nothing was reserved (insufficient stock). Kept so a retry with the same key gets the same answer. */
   REJECTED = "REJECTED",
+  /** Was CONFIRMED; the order was cancelled before shipping and the stock went back on hand. */
+  RETURNED = "RETURNED",
 }
 
 export interface UnavailableLine {
