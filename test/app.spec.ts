@@ -1,3 +1,4 @@
+import { DataSource } from "typeorm";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { ReadinessService } from "../src/health/readiness.service";
@@ -23,7 +24,22 @@ describe("Inventory Service HTTP foundation", () => {
   it("GET /health/ready checks the database", async () => {
     const res = await request(app.getHttpServer()).get("/health/ready");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ready", checks: { "accepting-traffic": "ok", database: "ok" } });
+    expect(res.body).toEqual({ status: "ready", checks: { "accepting-traffic": "ok", database: "ok", schema: "ok" } });
+  });
+
+  it("GET /health/ready is 503 while a migration shipped in the image is not applied", async () => {
+    const db = app.get(DataSource);
+    const [last] = (await db.query(`SELECT id, timestamp, name FROM migrations ORDER BY id DESC LIMIT 1`)) as { id: number; timestamp: string; name: string }[];
+    await db.query(`DELETE FROM migrations WHERE id = $1`, [last!.id]);
+    try {
+      const fresh = await buildApp();
+      const res = await request(fresh.getHttpServer()).get("/health/ready");
+      expect(res.status).toBe(503);
+      expect(res.body.checks).toMatchObject({ database: "ok", schema: "failed" });
+      await fresh.close();
+    } finally {
+      await db.query(`INSERT INTO migrations (id, timestamp, name) VALUES ($1, $2, $3)`, [last!.id, last!.timestamp, last!.name]);
+    }
   });
 
   it("GET /health/ready returns 503 when a registered check fails", async () => {
